@@ -1,1 +1,1 @@
-ocr_results = [{'x': 128, 'y': 1193, 'text': 'fsfs'}, {'x': 298, 'y': 299, 'text': 'Dayz'}]
+ocr_results = [{'x': 809, 'y': 567, 'text': 'VIN'}]

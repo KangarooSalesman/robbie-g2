@@ -7,7 +7,9 @@ from PIL import Image, ImageDraw, ImageTk
 import numpy as np
 from difflib import SequenceMatcher
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, ttk
+import pyautogui
+import time
 
 # Constants
 FIRST_OCR_THRESHOLD = 0.9
@@ -89,32 +91,58 @@ def find_coordinates(image_path, search_text):
         except Exception as e:
             print(f"Error cleaning up temporary files: {e}")
 
+def move_to_location(x, y, text):
+    print(f"Moving to '{text}' at ({x}, {y})")
+    pyautogui.moveTo(x, y, duration=1)
+    time.sleep(1)  # Pause for a second at each location
+
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Image Text Finder")
+        self.title("Image Text Finder and Cursor Mover")
         self.geometry("600x400")
 
         self.image_path = None
+        self.ocr_result = None
 
         self.create_widgets()
 
     def create_widgets(self):
-        self.image_label = tk.Label(self, text="No image selected")
+        self.notebook = ttk.Notebook(self)
+        self.notebook.pack(expand=True, fill='both')
+
+        self.search_frame = ttk.Frame(self.notebook)
+        self.move_frame = ttk.Frame(self.notebook)
+
+        self.notebook.add(self.search_frame, text='Search Text')
+        self.notebook.add(self.move_frame, text='Move Cursor')
+
+        self.create_search_widgets()
+        self.create_move_widgets()
+
+    def create_search_widgets(self):
+        self.image_label = tk.Label(self.search_frame, text="No image selected")
         self.image_label.pack(pady=20)
 
-        self.select_button = tk.Button(self, text="Select Image", command=self.select_image)
+        self.select_button = tk.Button(self.search_frame, text="Select Image", command=self.select_image)
         self.select_button.pack(pady=10)
 
-        self.text_entry = tk.Entry(self, width=50)
+        self.text_entry = tk.Entry(self.search_frame, width=50)
         self.text_entry.pack(pady=10)
         self.text_entry.insert(0, "Enter text to search")
 
-        self.search_button = tk.Button(self, text="Search", command=self.search_text)
+        self.search_button = tk.Button(self.search_frame, text="Search", command=self.search_text)
         self.search_button.pack(pady=10)
 
-        self.result_label = tk.Label(self, text="")
+        self.result_label = tk.Label(self.search_frame, text="")
         self.result_label.pack(pady=20)
+
+    def create_move_widgets(self):
+        self.info_label = tk.Label(self.move_frame, text="Click the button to move the cursor")
+        self.info_label.pack(pady=20)
+
+        self.move_button = tk.Button(self.move_frame, text="Move Cursor", command=self.move_cursor)
+        self.move_button.pack(pady=10)
 
     def select_image(self):
         self.image_path = filedialog.askopenfilename(filetypes=[("Image files", "*.png *.jpg *.jpeg *.bmp *.gif")])
@@ -131,13 +159,18 @@ class App(tk.Tk):
             messagebox.showerror("Error", "Please enter text to search")
             return
 
-        result = find_coordinates(self.image_path, search_text)
-        if result:
-            self.result_label.config(text=f"Found '{result['text']}' at ({result['x']}, {result['y']})")
-            with open('ocr_results.py', 'w') as f:
-                f.write(f"ocr_results = [{result}]\n")
+        self.ocr_result = find_coordinates(self.image_path, search_text)
+        if self.ocr_result:
+            self.result_label.config(text=f"Found '{self.ocr_result['text']}' at ({self.ocr_result['x']}, {self.ocr_result['y']})")
         else:
             self.result_label.config(text=f"Could not find '{search_text}'")
+
+    def move_cursor(self):
+        if self.ocr_result:
+            move_to_location(self.ocr_result["x"], self.ocr_result["y"], self.ocr_result["text"])
+            messagebox.showinfo("Success", "Cursor movement complete!")
+        else:
+            messagebox.showwarning("Warning", "No results found. Run the search in the first tab.")
 
 if __name__ == "__main__":
     app = App()
